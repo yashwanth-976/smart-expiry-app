@@ -3,13 +3,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const { items } = req.body;
+
+  if (!items) {
+    return res.status(400).json({ error: "No items provided" });
+  }
+
   try {
-    const { items } = req.body;
-
-    if (!items) {
-      return res.status(400).json({ reply: "No items provided" });
-    }
-
     const response = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
@@ -23,25 +23,21 @@ export default async function handler(req, res) {
           messages: [
             {
               role: "system",
-              content: "You are a helpful cooking assistant.",
+              content:
+                "You are a helpful assistant that suggests simple recipes to reduce food waste."
             },
             {
               role: "user",
-              content: `Suggest simple recipes using these items: ${items}`,
-            },
+              content: `Suggest easy recipes using these items: ${items}`
+            }
           ],
         }),
       }
     );
 
     const data = await response.json();
-
-    const reply =
-      data?.choices?.[0]?.message?.content || "No AI reply";
-
-    res.status(200).json({ reply });
+    res.status(200).json({ reply: data.choices[0].message.content });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ reply: "AI error occurred" });
+    res.status(500).json({ error: "AI request failed" });
   }
 }
