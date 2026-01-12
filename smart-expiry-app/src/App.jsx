@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 export default function App() {
   const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [openId, setOpenId] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -13,61 +14,53 @@ export default function App() {
     expiryDate: "",
   });
 
-  // LOAD DATA ON START
+  // Load saved products
   useEffect(() => {
     const saved = localStorage.getItem("products");
-    if (saved) {
-      setProducts(JSON.parse(saved));
-    }
+    if (saved) setProducts(JSON.parse(saved));
   }, []);
 
-  // SAVE DATA WHENEVER PRODUCTS CHANGE
+  // Save products
   useEffect(() => {
     localStorage.setItem("products", JSON.stringify(products));
   }, [products]);
 
-  // AUTO REMOVE EXPIRED PRODUCTS
+  // Auto remove expired
   useEffect(() => {
     const today = new Date();
-
-    const filtered = products.filter((item) => {
-      if (!item.expiryDate) return true;
-      const expiry = new Date(item.expiryDate);
-      return expiry >= today;
-    });
-
+    const filtered = products.filter(
+      (p) => new Date(p.expiryDate) >= today
+    );
     if (filtered.length !== products.length) {
       setProducts(filtered);
     }
   }, [products]);
 
-  // EXPIRY COLOR LOGIC
+  // Expiry color logic
   const getColor = (expiryDate) => {
     const today = new Date();
     const expiry = new Date(expiryDate);
+    const diffDays = Math.ceil(
+      (expiry - today) / (1000 * 60 * 60 * 24)
+    );
 
-    const diffTime = expiry - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays <= 1) return "#ff4d4d";   // Red
-    if (diffDays === 2) return "#ffc107";  // Yellow
-    return "#28a745";                      // Green
+    if (diffDays <= 1) return "#ff4d4d";
+    if (diffDays === 2) return "#ffc107";
+    return "#28a745";
   };
 
   const addProduct = () => {
     if (!formData.name || !formData.quantity || !formData.expiryDate) return;
 
-    const newProduct = {
-      id: Date.now(),
-      name: formData.name,
-      quantity: Number(formData.quantity),
-      unit: formData.unit,
-      price: Number(formData.price || 0),
-      category: formData.category,
-      expiryDate: formData.expiryDate,
-    };
-
-    setProducts([...products, newProduct]);
+    setProducts([
+      ...products,
+      {
+        id: Date.now(),
+        ...formData,
+        quantity: Number(formData.quantity),
+        price: Number(formData.price || 0),
+      },
+    ]);
 
     setFormData({
       name: "",
@@ -77,146 +70,132 @@ export default function App() {
       category: "",
       expiryDate: "",
     });
-
     setShowForm(false);
   };
 
   const reduceQuantity = (id) => {
-    const updated = products
-      .map((item) => {
-        if (item.id === id) {
-          const newQty = item.quantity - 1;
-          return newQty > 0 ? { ...item, quantity: newQty } : null;
-        }
-        return item;
-      })
-      .filter(Boolean);
-
-    setProducts(updated);
+    setProducts(
+      products
+        .map((p) =>
+          p.id === id
+            ? { ...p, quantity: p.quantity - 1 }
+            : p
+        )
+        .filter((p) => p.quantity > 0)
+    );
   };
 
   const consumeProduct = (id) => {
-    setProducts(products.filter((item) => item.id !== id));
+    setProducts(products.filter((p) => p.id !== id));
   };
 
   return (
-    <div style={{ maxWidth: "420px", margin: "20px auto", fontFamily: "Arial" }}>
+    <div style={{ maxWidth: 420, margin: "20px auto", fontFamily: "Arial" }}>
       <h2>Smart Expiry</h2>
 
       {/* ADD PRODUCT FORM */}
       {showForm && (
-        <div
-          style={{
-            padding: "10px",
-            background: "#f0f0f0",
-            borderRadius: "6px",
-            marginBottom: "15px",
-          }}
-        >
+        <div style={{ background: "#f0f0f0", padding: 10, borderRadius: 6 }}>
           <input
             placeholder="Product name"
             value={formData.name}
             onChange={(e) =>
               setFormData({ ...formData, name: e.target.value })
             }
-            style={{ width: "100%", marginBottom: "6px" }}
+            style={{ width: "100%", marginBottom: 6 }}
           />
-
           <input
-            placeholder="Quantity"
             type="number"
+            placeholder="Quantity"
             value={formData.quantity}
             onChange={(e) =>
               setFormData({ ...formData, quantity: e.target.value })
             }
-            style={{ width: "100%", marginBottom: "6px" }}
+            style={{ width: "100%", marginBottom: 6 }}
           />
-
           <input
             placeholder="Category"
             value={formData.category}
             onChange={(e) =>
               setFormData({ ...formData, category: e.target.value })
             }
-            style={{ width: "100%", marginBottom: "6px" }}
+            style={{ width: "100%", marginBottom: 6 }}
           />
-
           <input
-            placeholder="Price (optional)"
             type="number"
+            placeholder="Price"
             value={formData.price}
             onChange={(e) =>
               setFormData({ ...formData, price: e.target.value })
             }
-            style={{ width: "100%", marginBottom: "6px" }}
+            style={{ width: "100%", marginBottom: 6 }}
           />
-
           <input
             type="date"
             value={formData.expiryDate}
             onChange={(e) =>
               setFormData({ ...formData, expiryDate: e.target.value })
             }
-            style={{ width: "100%", marginBottom: "6px" }}
+            style={{ width: "100%", marginBottom: 6 }}
           />
-
-          <button
-            onClick={addProduct}
-            style={{
-              width: "100%",
-              padding: "8px",
-              background: "#28a745",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-            }}
-          >
-            Save Product
+          <button onClick={addProduct} style={{ width: "100%" }}>
+            Save
           </button>
         </div>
       )}
 
       {/* PRODUCT LIST */}
-      {products.map((item) => (
+      {products.map((p) => (
         <div
-          key={item.id}
+          key={p.id}
+          onClick={() => setOpenId(openId === p.id ? null : p.id)}
           style={{
-            padding: "10px",
-            marginBottom: "10px",
-            borderRadius: "6px",
-            backgroundColor: "#f5f5f5",
-            borderLeft: `6px solid ${getColor(item.expiryDate)}`,
+            background: "#f5f5f5",
+            padding: 10,
+            borderRadius: 6,
+            marginTop: 10,
+            cursor: "pointer",
+            borderLeft: `6px solid ${getColor(p.expiryDate)}`,
           }}
         >
-          <strong>{item.name}</strong>
-          <p>Quantity: {item.quantity} {item.unit}</p>
-          <p>Category: {item.category}</p>
-          <p>Price: ₹{item.price}</p>
-          <p>Expiry: {item.expiryDate}</p>
-
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={() => reduceQuantity(item.id)}>
-              Modify (-1)
-            </button>
-            <button onClick={() => consumeProduct(item.id)}>
-              Consume All
-            </button>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <strong>{p.name}</strong>
+            <span>📅</span>
           </div>
+
+          {openId === p.id && (
+            <div style={{ marginTop: 8, fontSize: 14 }}>
+              <div>Quantity: {p.quantity} {p.unit}</div>
+              <div>Price: ₹{p.price}</div>
+              <div>Category: {p.category}</div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    reduceQuantity(p.id);
+                  }}
+                >
+                  ✏️
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    consumeProduct(p.id);
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ))}
 
       <button
         onClick={() => setShowForm(!showForm)}
-        style={{
-          width: "100%",
-          padding: "10px",
-          marginTop: "15px",
-          borderRadius: "6px",
-          border: "none",
-          backgroundColor: "#007bff",
-          color: "white",
-          fontSize: "16px",
-        }}
+        style={{ width: "100%", marginTop: 15 }}
       >
         + Add Product
       </button>
