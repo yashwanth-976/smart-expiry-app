@@ -14,7 +14,7 @@ export default function App() {
     expiryDate: "",
   });
 
-  // Load saved products
+  // Load products
   useEffect(() => {
     const saved = localStorage.getItem("products");
     if (saved) setProducts(JSON.parse(saved));
@@ -44,9 +44,28 @@ export default function App() {
       (expiry - today) / (1000 * 60 * 60 * 24)
     );
 
-    if (diffDays <= 1) return "#ff4d4d";
-    if (diffDays === 2) return "#ffc107";
-    return "#28a745";
+    if (diffDays <= 1) return "#ff4d4d"; // red
+    if (diffDays === 2) return "#ffc107"; // yellow
+    return "#28a745"; // green
+  };
+
+  // Voice input (Speech to Text)
+  const startVoiceInput = () => {
+    if (!("webkitSpeechRecognition" in window)) {
+      alert("Voice input not supported in this browser");
+      return;
+    }
+
+    const recognition = new window.webkitSpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.start();
+
+    recognition.onresult = (event) => {
+      setFormData({
+        ...formData,
+        name: event.results[0][0].transcript,
+      });
+    };
   };
 
   const addProduct = () => {
@@ -77,9 +96,7 @@ export default function App() {
     setProducts(
       products
         .map((p) =>
-          p.id === id
-            ? { ...p, quantity: p.quantity - 1 }
-            : p
+          p.id === id ? { ...p, quantity: p.quantity - 1 } : p
         )
         .filter((p) => p.quantity > 0)
     );
@@ -96,14 +113,18 @@ export default function App() {
       {/* ADD PRODUCT FORM */}
       {showForm && (
         <div style={{ background: "#f0f0f0", padding: 10, borderRadius: 6 }}>
-          <input
-            placeholder="Product name"
-            value={formData.name}
-            onChange={(e) =>
-              setFormData({ ...formData, name: e.target.value })
-            }
-            style={{ width: "100%", marginBottom: 6 }}
-          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <input
+              placeholder="Product name"
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              style={{ flex: 1 }}
+            />
+            <button onClick={startVoiceInput}>🎤</button>
+          </div>
+
           <input
             type="number"
             placeholder="Quantity"
@@ -111,16 +132,18 @@ export default function App() {
             onChange={(e) =>
               setFormData({ ...formData, quantity: e.target.value })
             }
-            style={{ width: "100%", marginBottom: 6 }}
+            style={{ width: "100%", marginTop: 6 }}
           />
+
           <input
             placeholder="Category"
             value={formData.category}
             onChange={(e) =>
               setFormData({ ...formData, category: e.target.value })
             }
-            style={{ width: "100%", marginBottom: 6 }}
+            style={{ width: "100%", marginTop: 6 }}
           />
+
           <input
             type="number"
             placeholder="Price"
@@ -128,18 +151,31 @@ export default function App() {
             onChange={(e) =>
               setFormData({ ...formData, price: e.target.value })
             }
-            style={{ width: "100%", marginBottom: 6 }}
+            style={{ width: "100%", marginTop: 6 }}
           />
+
           <input
             type="date"
             value={formData.expiryDate}
             onChange={(e) =>
               setFormData({ ...formData, expiryDate: e.target.value })
             }
-            style={{ width: "100%", marginBottom: 6 }}
+            style={{ width: "100%", marginTop: 6 }}
           />
-          <button onClick={addProduct} style={{ width: "100%" }}>
-            Save
+
+          <button
+            onClick={addProduct}
+            style={{
+              width: "100%",
+              marginTop: 8,
+              padding: 8,
+              backgroundColor: "#007bff",
+              color: "white",
+              border: "none",
+              borderRadius: 4,
+            }}
+          >
+            Save Product
           </button>
         </div>
       )}
@@ -158,18 +194,16 @@ export default function App() {
             borderLeft: `6px solid ${getColor(p.expiryDate)}`,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <strong>{p.name}</strong>
-            <span>📅</span>
-          </div>
+          <strong>{p.name}</strong>
 
           {openId === p.id && (
-            <div style={{ marginTop: 8, fontSize: 14 }}>
+            <div style={{ marginTop: 6, fontSize: 14 }}>
               <div>Quantity: {p.quantity} {p.unit}</div>
               <div>Price: ₹{p.price}</div>
               <div>Category: {p.category}</div>
+              <div>Expiry Date: 📅 {p.expiryDate}</div>
 
-              <div style={{ display: "flex", gap: 12, marginTop: 6 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -178,7 +212,6 @@ export default function App() {
                 >
                   ✏️
                 </button>
-
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -195,7 +228,16 @@ export default function App() {
 
       <button
         onClick={() => setShowForm(!showForm)}
-        style={{ width: "100%", marginTop: 15 }}
+        style={{
+          width: "100%",
+          marginTop: 15,
+          padding: 10,
+          backgroundColor: "#28a745",
+          color: "white",
+          border: "none",
+          borderRadius: 6,
+          fontSize: 16,
+        }}
       >
         + Add Product
       </button>
