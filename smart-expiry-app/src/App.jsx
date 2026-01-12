@@ -10,7 +10,7 @@ export default function App() {
     unit: "pcs",
     price: "",
     category: "",
-    status: "green",
+    expiryDate: "",
   });
 
   // LOAD DATA ON START
@@ -26,31 +26,58 @@ export default function App() {
     localStorage.setItem("products", JSON.stringify(products));
   }, [products]);
 
-  const getColor = (status) => {
-    if (status === "red") return "#ff4d4d";
-    if (status === "yellow") return "#ffc107";
-    return "#28a745";
+  // AUTO REMOVE EXPIRED PRODUCTS
+  useEffect(() => {
+    const today = new Date();
+
+    const filtered = products.filter((item) => {
+      if (!item.expiryDate) return true;
+      const expiry = new Date(item.expiryDate);
+      return expiry >= today;
+    });
+
+    if (filtered.length !== products.length) {
+      setProducts(filtered);
+    }
+  }, [products]);
+
+  // EXPIRY COLOR LOGIC
+  const getColor = (expiryDate) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+
+    const diffTime = expiry - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 1) return "#ff4d4d";   // Red
+    if (diffDays === 2) return "#ffc107";  // Yellow
+    return "#28a745";                      // Green
   };
 
   const addProduct = () => {
-    if (!formData.name || !formData.quantity) return;
+    if (!formData.name || !formData.quantity || !formData.expiryDate) return;
 
     const newProduct = {
       id: Date.now(),
-      ...formData,
+      name: formData.name,
       quantity: Number(formData.quantity),
+      unit: formData.unit,
       price: Number(formData.price || 0),
+      category: formData.category,
+      expiryDate: formData.expiryDate,
     };
 
     setProducts([...products, newProduct]);
+
     setFormData({
       name: "",
       quantity: "",
       unit: "pcs",
       price: "",
       category: "",
-      status: "green",
+      expiryDate: "",
     });
+
     setShowForm(false);
   };
 
@@ -73,9 +100,7 @@ export default function App() {
   };
 
   return (
-    <div
-      style={{ maxWidth: "420px", margin: "20px auto", fontFamily: "Arial" }}
-    >
+    <div style={{ maxWidth: "420px", margin: "20px auto", fontFamily: "Arial" }}>
       <h2>Smart Expiry</h2>
 
       {/* ADD PRODUCT FORM */}
@@ -91,7 +116,9 @@ export default function App() {
           <input
             placeholder="Product name"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) =>
+              setFormData({ ...formData, name: e.target.value })
+            }
             style={{ width: "100%", marginBottom: "6px" }}
           />
 
@@ -101,6 +128,15 @@ export default function App() {
             value={formData.quantity}
             onChange={(e) =>
               setFormData({ ...formData, quantity: e.target.value })
+            }
+            style={{ width: "100%", marginBottom: "6px" }}
+          />
+
+          <input
+            placeholder="Category"
+            value={formData.category}
+            onChange={(e) =>
+              setFormData({ ...formData, category: e.target.value })
             }
             style={{ width: "100%", marginBottom: "6px" }}
           />
@@ -116,10 +152,10 @@ export default function App() {
           />
 
           <input
-            placeholder="Category"
-            value={formData.category}
+            type="date"
+            value={formData.expiryDate}
             onChange={(e) =>
-              setFormData({ ...formData, category: e.target.value })
+              setFormData({ ...formData, expiryDate: e.target.value })
             }
             style={{ width: "100%", marginBottom: "6px" }}
           />
@@ -149,18 +185,22 @@ export default function App() {
             marginBottom: "10px",
             borderRadius: "6px",
             backgroundColor: "#f5f5f5",
+            borderLeft: `6px solid ${getColor(item.expiryDate)}`,
           }}
         >
           <strong>{item.name}</strong>
-          <p>
-            Quantity: {item.quantity} {item.unit}
-          </p>
-          <p>Price: ₹{item.price}</p>
+          <p>Quantity: {item.quantity} {item.unit}</p>
           <p>Category: {item.category}</p>
+          <p>Price: ₹{item.price}</p>
+          <p>Expiry: {item.expiryDate}</p>
 
           <div style={{ display: "flex", gap: "10px" }}>
-            <button onClick={() => reduceQuantity(item.id)}>Modify (-1)</button>
-            <button onClick={() => consumeProduct(item.id)}>Consume All</button>
+            <button onClick={() => reduceQuantity(item.id)}>
+              Modify (-1)
+            </button>
+            <button onClick={() => consumeProduct(item.id)}>
+              Consume All
+            </button>
           </div>
         </div>
       ))}
