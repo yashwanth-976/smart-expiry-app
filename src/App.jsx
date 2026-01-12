@@ -40,22 +40,23 @@ export default function App() {
     setFormData({ name: "", quantity: "", unit: "pcs", expiryDate: "" });
   };
 
-  const getAIRecipes = async () => {
-    setAiResponse("Thinking...");
-    try {
-      const res = await fetch("/api/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: products.map((p) => p.name).join(", "),
-        }),
-      });
-      const data = await res.json();
-      setAiResponse(data.reply || "No response");
-    } catch {
-      setAiResponse("⚠️ AI service not available.");
-    }
-  };
+ const getAIRecipes = async () => {
+  try {
+    setAiResponse("Loading...");
+
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ products })
+    });
+
+    const data = await res.json();
+    setAiResponse(data.reply);
+
+  } catch (err) {
+    setAiResponse("AI service not available");
+  }
+};
 
   return (
     <div style={{ maxWidth: 400, margin: "auto" }}>
